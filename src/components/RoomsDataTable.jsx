@@ -42,7 +42,7 @@ export default function RoomsTable({ currentUserName }) {
         <table className="table table-bordered mt-3">
           <thead>
             <tr>
-              <th>Room Number</th>
+              <th>Room Numbeer</th>
               <th>Room Type</th>
               <th>Price</th>
               <th>Capacity</th>
