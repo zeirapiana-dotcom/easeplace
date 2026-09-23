@@ -1,0 +1,378 @@
+:root{
+  --ink:#211F1C;
+  --ink-soft:#5B584E;
+  --paper:#F1F0E4;
+  --paper-alt:#E7E4D4;
+  --surface:#FFFFFF;
+  --line:#D9D5C2;
+  --forest:#26433A;
+  --forest-dark:#1A2E28;
+  --forest-tint:#E1E9E4;
+  --gold:#C9932E;
+  --gold-dark:#8F6717;
+  --gold-tint:#F5E7C7;
+  --coral:#B5533C;
+  --coral-dark:#7E3A2A;
+  --coral-tint:#F3DCD4;
+  --teal2:#3E6E77;
+  --teal2-tint:#DCE9EB;
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:22px;
+  --shadow-card:0 1px 2px rgba(33,31,28,.05), 0 10px 28px -16px rgba(33,31,28,.28);
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'Public Sans','Segoe UI', sans-serif;
+}
+
+/* ==========================================================================
+   Base / reset
+   ========================================================================== */
+*{
+  box-sizing: border-box;
+}
+
+html,body{
+  margin: 0;
+  padding:0;
+}
+
+body{
+  font-family:var(--font-body);
+  background:var(--paper);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+h1,h2,h3,h4{font-family:var(--font-display); margin:0; color:var(--forest-dark); font-weight:600;}
+p{margin:0;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit; font-size:15px;}
+a{color:inherit;}
+.hidden{display:none !important;}
+::selection{background:var(--gold-tint);}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px 22px; border-radius:999px; border:1px solid transparent;
+  font-weight:600; font-size:15px; transition:transform .12s ease, background .15s ease;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--forest); color:#F7F4E9;}
+.btn-primary:hover{background:var(--forest-dark);}
+.btn-gold{background:var(--gold); color:#3A2A08;}
+.btn-gold:hover{background:var(--gold-dark); color:#fff;}
+.btn-ghost{background:transparent; border-color:var(--line); color:var(--ink);}
+.btn-ghost:hover{border-color:var(--ink-soft);}
+.btn-danger{background:transparent; border-color:var(--coral); color:var(--coral-dark);}
+.btn-danger:hover{background:var(--coral-tint);}
+.btn-sm{padding:8px 16px; font-size:13px;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+
+/* ==========================================================================
+   Login screen
+   ========================================================================== */
+#view-login{min-height:100vh;}
+.login-art{
+  color:#F5F1E2; padding:56px;
+  flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;
+  background:var(--forest) center/cover no-repeat;
+  min-height:100vh;
+  background-image: url('bg.jpg');
+}
+.login-art::before{
+  content:"";
+  position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(26,46,40,.6) 0%, rgba(26,46,40,.74) 55%, rgba(26,46,40,.92) 100%);
+  z-index:0;
+}
+.login-art > *{position:relative; z-index:1;}
+
+/* ---- compact mobile banner (shown instead of the full art panel below lg) ---- */
+.login-art-compact{
+  flex-direction:column; gap:16px; padding:22px 20px;
+  background:var(--forest); color:#F5F1E2;
+}
+.login-art-compact .login-brand-row{display:flex; align-items:center; gap:14px;}
+.login-art-compact .login-brand{font-size:19px;}
+.login-features-compact{display:flex; gap:10px; flex-wrap:wrap;}
+.mini-feature{
+  display:flex; align-items:center; gap:7px;
+  background:rgba(245,241,226,.1); border:1px solid rgba(245,241,226,.22);
+  border-radius:999px; padding:7px 13px; color:var(--gold-tint);
+  font-size:12.5px; font-weight:600;
+}
+.mini-feature svg{flex-shrink:0;}
+.mini-feature span{color:#F0ECD9;}
+
+/* ---- brand block (logo mark + name + system tag) ---- */
+.login-art-top{display:flex; flex-direction:column; gap:16px;}
+.login-brand-row{display:flex; align-items:center; gap:14px;}
+.brand-logo-mark{
+  width:44px; height:44px; border-radius:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; color:var(--gold-tint);
+  overflow:hidden;
+}
+/* Logo image inside the login brand mark. Replace logo.png (same folder
+   as index.html) with your own file. If no logo.png exists, the img
+   fires onerror and hides itself, leaving the plain gold circle. */
+.brand-logo-mark img{
+  width:150%; height:150%; object-fit:contain; display:block;
+}
+.login-brand{font-family:var(--font-display); font-size:24px; font-weight:600; letter-spacing:.2px; line-height:1.25;}
+.system-tag{
+  display:inline-block; margin-top:5px; padding:3px 11px; border-radius:999px;
+  background:rgba(245,241,226,.12); border:1px solid rgba(245,241,226,.28);
+  font-size:11.5px; font-weight:600; letter-spacing:.4px; color:var(--gold-tint);
+}
+.login-tagline{max-width:380px; font-size:16px; color:#DCE3D6; line-height:1.6;}
+
+/* ---- feature list ---- */
+.login-feature-boxes{display:flex; flex-direction:column; gap:12px; max-width:400px;}
+.feature-box{
+  display:flex; flex-direction:row; align-items:center; gap:16px;
+  background:rgba(245,241,226,.08); border:1px solid rgba(245,241,226,.16);
+  border-radius:var(--radius-md); padding:15px 18px; backdrop-filter:blur(2px);
+  transition:background .2s ease, border-color .2s ease;
+}
+.feature-box:hover{background:rgba(245,241,226,.13); border-color:rgba(245,241,226,.28);}
+.feature-box .icon{
+  flex-shrink:0; width:42px; height:42px; border-radius:50%;
+  background:rgba(201,147,46,.2); color:var(--gold-tint);
+  display:flex; align-items:center; justify-content:center;
+}
+.feature-box .icon svg{display:block;}
+.feature-box h3{font-family:var(--font-display); font-size:15px; color:#fff; margin-bottom:3px; font-weight:600;}
+.feature-box p{font-size:12.5px; color:#CBD6C6; line-height:1.5; margin:0;}
+
+/* ---- footer line inside the art panel ---- */
+.login-foot{
+  font-size:12.5px; color:#B9C4B4; padding-top:16px;
+  border-top:1px solid rgba(245,241,226,.15);
+}
+
+.login-panel{
+  align-items:center; justify-content:center; padding:32px; min-height:100vh;
+}
+.login-card{width:100%; max-width:400px;}
+.login-card h2{font-size:28px; margin-bottom:6px;}
+.login-sub{color:var(--ink-soft); font-size:15px; margin-bottom:26px;}
+.role-switch{display:flex; background:var(--paper-alt); border-radius:999px; padding:4px; margin-bottom:24px;}
+.role-switch button{
+  flex:1; background:transparent; border:none; padding:10px; border-radius:999px;
+  font-weight:600; font-size:14px; color:var(--ink-soft);
+}
+.role-switch button.active{background:var(--surface); color:var(--forest-dark); box-shadow:var(--shadow-card);}
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;}
+.field input, .field select, .field textarea{
+  width:100%; padding:11px 14px; border-radius:var(--radius-sm); border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); outline:none;
+}
+.field input:focus, .field select:focus, .field textarea:focus{border-color:var(--forest); box-shadow:0 0 0 3px var(--forest-tint);}
+.login-hint{
+  margin-top:18px; padding:14px 16px; background:var(--gold-tint); border-radius:var(--radius-sm);
+  font-size:13px; color:#5A4212; line-height:1.55;
+}
+.login-error{
+  margin-bottom:16px; padding:10px 14px; background:var(--coral-tint); color:var(--coral-dark);
+  border-radius:var(--radius-sm); font-size:13.5px;
+}
+.login-help-link{font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:16px;}
+.login-help-link a{color:var(--forest-dark); font-weight:600; text-decoration:underline;}
+.login-mini-foot{font-size:12.5px; color:var(--ink-soft); text-align:center; margin-top:14px;}
+
+/* ==========================================================================
+   App shell (topbar + main + footer wrapper shared by boarder & admin views)
+   ========================================================================== */
+.app-shell{min-height:100vh; display:flex; flex-direction:column;}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px 28px; background:var(--surface); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:20;
+}
+.topbar-left{display:flex; align-items:center; gap:28px;}
+.brand-mini{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:600; font-size:19px; color:var(--forest-dark);}
+.brand-dot{width:10px; height:10px; border-radius:50%; background:var(--gold);}
+/* Logo image inside the topbar brand. Replace logo.png with your own
+   file. If it fails to load, onerror in the HTML swaps back to the
+   plain gold dot (.brand-dot). */
+.brand-mini-logo{
+  width:28px; height:28px; object-fit:contain; border-radius:6px; display:block;
+}
+.tabs{display:flex; gap:4px;}
+.tab-btn{
+  background:transparent; border:none; padding:9px 16px; border-radius:999px; font-size:14.5px;
+  font-weight:600; color:var(--ink-soft);
+}
+.tab-btn.active{background:var(--forest-tint); color:var(--forest-dark);}
+.topbar-right{display:flex; align-items:center; gap:14px;}
+.user-chip{display:flex; align-items:center; gap:10px;}
+.avatar{
+  width:36px; height:36px; border-radius:50%; background:var(--gold-tint); color:var(--gold-dark);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;
+}
+.user-meta{font-size:13px; line-height:1.3;}
+.user-meta strong{display:block; font-size:14px; color:var(--forest-dark);}
+
+main{flex:1; padding:28px; max-width:1180px; width:100%; margin:0 auto;}
+
+.hero-strip{
+  background:var(--forest); color:#F4F0E1; border-radius:var(--radius-lg); padding:26px 30px;
+  display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:26px; flex-wrap:wrap;
+}
+.hero-strip h1{color:#fff; font-size:24px;}
+.hero-strip p{color:#CBD6C6; margin-top:6px; font-size:14.5px;}
+.hero-stats{display:flex; gap:26px;}
+.hero-stat b{display:block; font-size:22px; font-family:var(--font-display); color:var(--gold-tint);}
+.hero-stat span{font-size:12.5px; color:#B9C4B4;}
+
+.section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;}
+.section-head h2{font-size:20px;}
+.chip-filters{display:flex; gap:8px; flex-wrap:wrap;}
+.chip-filter{
+  border:1px solid var(--line); background:var(--surface); padding:7px 14px; border-radius:999px;
+  font-size:13px; font-weight:600; color:var(--ink-soft);
+}
+.chip-filter.active{background:var(--forest); color:#fff; border-color:var(--forest);}
+
+/* ==========================================================================
+   Room grid & cards (boarder view)
+   ========================================================================== */
+.room-grid{margin-bottom:36px;}
+.room-grid .col{display:flex;}
+.room-card{
+  width:100%;
+  background:var(--surface); border-radius:var(--radius-md); overflow:hidden; box-shadow:var(--shadow-card);
+  display:flex; flex-direction:column; transition:transform .15s ease;
+}
+.room-card:hover{transform:translateY(-3px);}
+.room-art{aspect-ratio:4/3; width:100%; position:relative; overflow:hidden;}
+.room-art img{width:100%; height:100%; object-fit:cover; display:block;}
+.room-body{padding:16px 18px 18px; display:flex; flex-direction:column; gap:10px; flex:1;}
+.room-top{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+.room-name{font-size:17px;}
+.room-type{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+.badge{padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:700; white-space:nowrap;}
+.badge-available{background:var(--forest-tint); color:var(--forest-dark);}
+.badge-occupied{background:var(--coral-tint); color:var(--coral-dark);}
+.badge-maintenance{background:var(--gold-tint); color:var(--gold-dark);}
+.badge-pending{background:var(--gold-tint); color:var(--gold-dark);}
+.badge-confirmed{background:var(--forest-tint); color:var(--forest-dark);}
+.badge-cancelled{background:var(--coral-tint); color:var(--coral-dark);}
+.room-price{font-family:var(--font-display); font-size:21px; color:var(--forest-dark);}
+.room-price span{font-size:12.5px; font-family:var(--font-body); color:var(--ink-soft); font-weight:600;}
+.room-cap{font-size:13px; color:var(--ink-soft);}
+.amenity-row{display:flex; flex-wrap:wrap; gap:6px;}
+.amenity-chip{background:var(--paper-alt); color:var(--ink-soft); font-size:11.5px; padding:4px 9px; border-radius:6px;}
+.room-actions{margin-top:auto; padding-top:6px;}
+.room-actions .btn{width:100%;}
+
+/* ==========================================================================
+   Reservation cards (boarder view — "My reservations")
+   ========================================================================== */
+.res-list{display:flex; flex-direction:column; gap:12px; margin-bottom:36px;}
+.res-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px 18px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+}
+.res-info h3{font-size:16px; margin-bottom:4px;}
+.res-meta{font-size:13px; color:var(--ink-soft); display:flex; gap:14px; flex-wrap:wrap;}
+.res-side{display:flex; align-items:center; gap:12px;}
+.empty-state{
+  text-align:center; padding:50px 20px; background:var(--surface); border:1px dashed var(--line); border-radius:var(--radius-md);
+  color:var(--ink-soft);
+}
+.empty-state h3{color:var(--forest-dark); margin-bottom:8px;}
+
+/* ==========================================================================
+   Stat cards (admin overview)
+   ========================================================================== */
+.stat-grid{margin-bottom:32px;}
+.stat-card{
+  background:var(--surface); border-left:4px solid var(--forest); border-radius:var(--radius-sm);
+  padding:16px 18px; box-shadow:var(--shadow-card);
+}
+.stat-card.gold{border-left-color:var(--gold);}
+.stat-card.coral{border-left-color:var(--coral);}
+.stat-card.teal{border-left-color:var(--teal2);}
+.stat-label{font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-bottom:6px;}
+.stat-value{font-family:var(--font-display); font-size:26px; color:var(--forest-dark);}
+
+/* ==========================================================================
+   Tables (admin — recent requests, all reservations)
+   ========================================================================== */
+.table-wrap{background:var(--surface); border-radius:var(--radius-md); box-shadow:var(--shadow-card); overflow-x:auto; margin-bottom:36px;}
+table{width:100%; border-collapse:collapse; min-width:640px;}
+thead th{
+  text-align:left; font-size:12px; text-transform:none; color:var(--ink-soft); font-weight:700;
+  padding:14px 18px; border-bottom:1px solid var(--line); background:var(--paper-alt);
+}
+tbody td{padding:14px 18px; border-bottom:1px solid var(--line); font-size:14px; vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+.row-actions{display:flex; gap:8px; flex-wrap:wrap;}
+
+/* ==========================================================================
+   Room management list (admin)
+   ========================================================================== */
+.admin-room-list{display:flex; flex-direction:column; gap:10px; margin-bottom:36px;}
+.admin-room-row{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 18px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:space-between;
+}
+.admin-room-info{display:flex; align-items:center; gap:14px;}
+.admin-room-swatch{width:44px; height:44px; border-radius:10px; flex-shrink:0;}
+.admin-room-select{padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--line); background:var(--paper); font-size:13.5px; font-weight:600;}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+footer{background:var(--forest-dark); color:#D7DCCF; margin-top:auto;}
+.footer-inner{max-width:1180px; margin:0 auto; padding:46px 28px 24px;}
+.footer-brand{font-family:var(--font-display); font-size:20px; color:#fff; margin-bottom:10px;}
+.footer-inner p{font-size:13.5px; line-height:1.7; color:#AEB7A2;}
+.footer-col h4{color:#E9E5D2; font-size:13px; font-weight:700; margin-bottom:12px;}
+.footer-col ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px;}
+.footer-col a{font-size:13.5px; color:#C4CBB8; text-decoration:none;}
+.footer-col a:hover{color:#fff;}
+.footer-bottom{border-top:1px solid #33453D; padding:16px 28px; text-align:center; font-size:12.5px; color:#93A088;}
+
+/* ==========================================================================
+   Modal & toast
+   ========================================================================== */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(26,24,20,.55); display:flex; align-items:center; justify-content:center;
+  padding:20px; z-index:100;
+}
+.modal-card{background:var(--surface); border-radius:var(--radius-lg); max-width:460px; width:100%; padding:28px; max-height:90vh; overflow-y:auto;}
+.modal-head{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:6px;}
+.modal-close{background:transparent; border:none; font-size:20px; color:var(--ink-soft); line-height:1;}
+.modal-sub{color:var(--ink-soft); font-size:13.5px; margin-bottom:20px;}
+
+.toast{
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--forest-dark); color:#F4F0E1;
+  padding:13px 22px; border-radius:999px; font-size:14px; font-weight:600; z-index:200; box-shadow:0 10px 30px rgba(0,0,0,.25);
+  opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 720px){
+  .topbar{padding:12px 16px;}
+  .tabs{
+    position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--line);
+    padding:8px 10px; justify-content:space-around; z-index:30; display:flex; gap:2px;
+  }
+  .tab-btn{padding:9px 10px; font-size:13px;}
+  .user-meta{display:none;}
+  main{padding:18px 16px 90px;}
+  .hero-strip{flex-direction:column; align-items:flex-start;}
+  .footer-inner{padding:36px 20px 20px;}
+  .res-card{flex-direction:column; align-items:flex-start;}
+  .res-side{width:100%; justify-content:flex-end;}
+}
