@@ -12,9 +12,7 @@ export default function Login({ onLogin, onGoogleLogin }) {
   const subtext = isBoarder
     ? 'Sign in to browse rooms and manage your reservation.'
     : 'Monitor rooms and manage reservation requests.';
-  const hint = isBoarder
-    ? <>Demo boarder account — username: <strong>zeira</strong>, password: <strong>boarder123</strong></>
-    : <>Demo admin account — username: <strong>admin</strong>, password: <strong>admin123</strong></>;
+ 
 
   function handleRoleChange(nextRole) {
     setRole(nextRole);
@@ -173,7 +171,6 @@ export default function Login({ onLogin, onGoogleLogin }) {
             Sign in with Google
           </button>
 
-          <div className="login-hint">{hint}</div>
           <p className="login-help-link">Need help signing in? <a href="mailto:zeirapiana@gmail.com">Contact the property manager</a></p>
           <p className="login-mini-foot">© 2026 EasePlace Boarding House. All rights reserved.</p>
         </div>
