@@ -16,12 +16,10 @@ export default function ReserveModal({ room, currentUserName, onClose, onSubmit 
   async function formSubmit(e) {
     e.preventDefault();
 
-    // if (!name.trim() || !contact.trim() || !moveIn || !months || months < 1) {
-    //   onSubmit(null); // signal invalid -> parent shows toast
-    //   return;
-    // }
-
-
+    if (!name.trim() || !contact.trim() || !moveIn || !months || months < 1) {
+      onSubmit(null); // signal invalid -> parent shows toast
+      return;
+    }
 
     try {
       const response = await fetch(api_url, {
@@ -30,6 +28,8 @@ export default function ReserveModal({ room, currentUserName, onClose, onSubmit 
         body: JSON.stringify({
           name: name,
           contact: contact,
+          moveIn: moveIn,
+          months: months,
 
         })
       });
