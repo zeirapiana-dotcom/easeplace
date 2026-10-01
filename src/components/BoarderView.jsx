@@ -2,7 +2,7 @@ import { useState } from 'react';
 import RoomArt from './RoomArt';
 import { peso, formatDate, initials } from '../utils/helpers';
 
-export default function BoarderView({ currentUser, rooms, reservations, onLogout, onOpenReserve, onCancelReservation }) {
+export default function BoarderView({ currentUser, rooms, reservations, onLogout, onOpenReserve, onCancelReservation, onEditReservation }) {
   const [tab, setTab] = useState('rooms');
 
   const availableCount = rooms.filter(r => r.status === 'available').length;
