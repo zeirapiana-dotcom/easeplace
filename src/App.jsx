@@ -145,6 +145,12 @@ export default function App() {
     showToast((room ? room.name : 'Room') + ' updated to ' + status + '.');
   }
 
+  // NEW: save edited room details (name, type, price, capacity, amenities)
+  function handleSaveRoom(roomId, formData) {
+    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, ...formData } : r));
+    showToast(formData.name + ' updated.');
+  }
+
   const activeRoom = rooms.find(r => r.id === activeReserveRoomId);
 
   if (authLoading) return <h2>Loading Application State...</h2>;
@@ -172,6 +178,7 @@ export default function App() {
           onApprove={handleApprove}
           onReject={handleReject}
           onUpdateRoomStatus={handleUpdateRoomStatus}
+          onSaveRoom={handleSaveRoom} // NEW
         />
       )}
 
@@ -187,4 +194,4 @@ export default function App() {
       <Toast message={toast.message} show={toast.show} />
     </>
   );
-} 
+}

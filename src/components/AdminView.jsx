@@ -2,9 +2,42 @@ import { useState } from 'react';
 import { ART_PALETTE } from '../data/seedData';
 import { peso, formatDate } from '../utils/helpers';
 
-export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus }) {
+export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus, onSaveRoom }) { // NEW: onSaveRoom
   const [tab, setTab] = useState('overview');
   const [filter, setFilter] = useState('all');
+
+  // NEW: edit room state and functions
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [form, setForm] = useState({ name: '', type: '', price: '', capacity: '', amenities: '' });
+
+  function openEdit(room) {
+    setEditingRoom(room);
+    setForm({
+      name: room.name,
+      type: room.type,
+      price: room.price,
+      capacity: room.capacity,
+      amenities: room.amenities.join(', '),
+    });
+  }
+
+  function handleFormChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function saveEdit(e) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.type.trim() || Number(form.price) < 0 || Number(form.capacity) < 1) return;
+
+    onSaveRoom(editingRoom.id, {
+      name: form.name.trim(),
+      type: form.type.trim(),
+      price: Number(form.price),
+      capacity: Number(form.capacity),
+      amenities: form.amenities.split(',').map(a => a.trim()).filter(Boolean),
+    });
+    setEditingRoom(null);
+  }
 
   const total = rooms.length;
   const occupied = rooms.filter(r => r.status === 'occupied').length;
@@ -156,11 +189,15 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
                         <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{room.type} · {peso(room.price)}/mo · Sleeps {room.capacity}</div>
                       </div>
                     </div>
-                    <select className="admin-room-select" value={room.status} onChange={(e) => onUpdateRoomStatus(room.id, e.target.value)}>
-                      <option value="available">Available</option>
-                      <option value="occupied">Occupied</option>
-                      <option value="maintenance">Under maintenance</option>
-                    </select>
+                    {/* NEW: Edit button beside the status dropdown */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(room)}>Edit</button>
+                      <select className="admin-room-select" value={room.status} onChange={(e) => onUpdateRoomStatus(room.id, e.target.value)}>
+                        <option value="available">Available</option>
+                        <option value="occupied">Occupied</option>
+                        <option value="maintenance">Under maintenance</option>
+                      </select>
+                    </div>
                   </div>
                 );
               })}
@@ -184,6 +221,41 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
         </div>
         <div className="footer-bottom">© 2026 EasePlace Boarding House. All rights reserved.</div>
       </footer>
+
+      {/* NEW: Edit room modal */}
+      {editingRoom && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-head">
+              <h2>Edit {editingRoom.name}</h2>
+              <button className="modal-close" onClick={() => setEditingRoom(null)} aria-label="Close">✕</button>
+            </div>
+            <form onSubmit={saveEdit}>
+              <div className="field">
+                <label htmlFor="room-name">Room name</label>
+                <input type="text" id="room-name" name="name" value={form.name} onChange={handleFormChange} required />
+              </div>
+              <div className="field">
+                <label htmlFor="room-type">Type</label>
+                <input type="text" id="room-type" name="type" value={form.type} onChange={handleFormChange} required />
+              </div>
+              <div className="field">
+                <label htmlFor="room-price">Price per month (₱)</label>
+                <input type="number" id="room-price" name="price" min="0" value={form.price} onChange={handleFormChange} required />
+              </div>
+              <div className="field">
+                <label htmlFor="room-capacity">Capacity (sleeps)</label>
+                <input type="number" id="room-capacity" name="capacity" min="1" value={form.capacity} onChange={handleFormChange} required />
+              </div>
+              <div className="field">
+                <label htmlFor="room-amenities">Amenities (separate with commas)</label>
+                <input type="text" id="room-amenities" name="amenities" value={form.amenities} onChange={handleFormChange} />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Save changes</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
