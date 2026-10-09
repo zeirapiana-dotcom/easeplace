@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { ART_PALETTE } from '../data/seedData';
 import { peso, formatDate } from '../utils/helpers';
 
-export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus, onSaveRoom }) { // NEW: onSaveRoom
+export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus, onSaveRoom, onDeleteRoom, onRestoreRoom }) { // NEW: onRestoreRoom
   const [tab, setTab] = useState('overview');
   const [filter, setFilter] = useState('all');
+  const [roomView, setRoomView] = useState('active'); // NEW: 'active' | 'deleted'
 
-  // NEW: edit room state and functions
+  // Edit room state and functions
   const [editingRoom, setEditingRoom] = useState(null);
   const [form, setForm] = useState({ name: '', type: '', price: '', capacity: '', amenities: '' });
 
@@ -39,9 +40,20 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
     setEditingRoom(null);
   }
 
-  const total = rooms.length;
-  const occupied = rooms.filter(r => r.status === 'occupied').length;
-  const available = rooms.filter(r => r.status === 'available').length;
+  // Delete room (soft delete, with confirmation)
+  function confirmDelete(room) {
+    if (window.confirm(`Move ${room.name} to Deleted? You can restore it later.`)) {
+      onDeleteRoom(room.id);
+    }
+  }
+
+  // NEW: separate active and deleted rooms
+  const activeRooms = rooms.filter(r => !r.deleted);
+  const deletedRooms = rooms.filter(r => r.deleted);
+
+  const total = activeRooms.length;
+  const occupied = activeRooms.filter(r => r.status === 'occupied').length;
+  const available = activeRooms.filter(r => r.status === 'available').length;
   const pending = reservations.filter(r => r.status === 'pending').length;
   const revenue = reservations.filter(r => r.status === 'confirmed').reduce((sum, r) => {
     const room = rooms.find(rm => rm.id === r.roomId);
@@ -176,9 +188,21 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
 
         {tab === 'rooms' && (
           <section>
-            <div className="section-head"><h2>Room management</h2></div>
+            <div className="section-head">
+              <h2>Room management</h2>
+              {/* NEW: Active / Deleted filter */}
+              <div className="chip-filters">
+                <button className={`chip-filter${roomView === 'active' ? ' active' : ''}`} onClick={() => setRoomView('active')}>
+                  Active ({activeRooms.length})
+                </button>
+                <button className={`chip-filter${roomView === 'deleted' ? ' active' : ''}`} onClick={() => setRoomView('deleted')}>
+                  Deleted ({deletedRooms.length})
+                </button>
+              </div>
+            </div>
+
             <div className="admin-room-list">
-              {rooms.map(room => {
+              {roomView === 'active' && activeRooms.map(room => {
                 const p = ART_PALETTE[room.art] || ART_PALETTE.forest;
                 return (
                   <div className="admin-room-row" key={room.id}>
@@ -189,14 +213,37 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
                         <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{room.type} · {peso(room.price)}/mo · Sleeps {room.capacity}</div>
                       </div>
                     </div>
-                    {/* NEW: Edit button beside the status dropdown */}
+                    {/* Edit + Delete buttons beside the status dropdown */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <button className="btn btn-ghost btn-sm" onClick={() => openEdit(room)}>Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => confirmDelete(room)}>Delete</button>
                       <select className="admin-room-select" value={room.status} onChange={(e) => onUpdateRoomStatus(room.id, e.target.value)}>
                         <option value="available">Available</option>
                         <option value="occupied">Occupied</option>
                         <option value="maintenance">Under maintenance</option>
                       </select>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* NEW: Deleted rooms with Restore button */}
+              {roomView === 'deleted' && deletedRooms.length === 0 && (
+                <p style={{ textAlign: 'center', color: 'var(--ink-soft)', padding: 28 }}>No deleted rooms.</p>
+              )}
+              {roomView === 'deleted' && deletedRooms.map(room => {
+                const p = ART_PALETTE[room.art] || ART_PALETTE.forest;
+                return (
+                  <div className="admin-room-row" key={room.id} style={{ opacity: 0.75 }}>
+                    <div className="admin-room-info">
+                      <div className="admin-room-swatch" style={{ background: p.wall, border: `2px solid ${p.roof}` }}></div>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{room.name}</div>
+                        <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{room.type} · {peso(room.price)}/mo · Sleeps {room.capacity}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => onRestoreRoom(room.id)}>Restore</button>
                     </div>
                   </div>
                 );
@@ -222,7 +269,7 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
         <div className="footer-bottom">© 2026 EasePlace Boarding House. All rights reserved.</div>
       </footer>
 
-      {/* NEW: Edit room modal */}
+      {/* Edit room modal */}
       {editingRoom && (
         <div className="modal-overlay">
           <div className="modal-card">

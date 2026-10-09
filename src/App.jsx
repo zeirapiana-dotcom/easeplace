@@ -11,6 +11,8 @@ import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+const API_URL = 'http://localhost:8080/api/reservations';
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -25,6 +27,18 @@ export default function App() {
     setToast({ message, show: true });
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2600);
+  }
+
+  // NEW: send the full room to the backend (adds it if missing, updates if existing)
+  async function syncRoom(room) {
+    const { deleted, ...payload } = room; // the "deleted" flag is frontend-only
+    const res = await fetch(`${API_URL}/${room.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Sync failed');
+    return res.json();
   }
 
   function handleLogin(user) {
@@ -124,7 +138,9 @@ export default function App() {
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'confirmed' } : r));
     const res = reservations.find(r => r.id === id);
     if (res) {
+      const room = rooms.find(r => r.id === res.roomId);
       setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'occupied' } : r));
+      if (room) syncRoom({ ...room, status: 'occupied' }).catch(console.error); // NEW: sync to backend
     }
     showToast('Reservation confirmed.');
   }
@@ -134,21 +150,85 @@ export default function App() {
     const wasConfirmed = res && res.status === 'confirmed';
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
     if (wasConfirmed && res) {
+      const room = rooms.find(r => r.id === res.roomId);
       setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'available' } : r));
+      if (room) syncRoom({ ...room, status: 'available' }).catch(console.error); // NEW: sync to backend
     }
     showToast(wasConfirmed ? 'Reservation cancelled.' : 'Reservation rejected.');
   }
 
-  function handleUpdateRoomStatus(roomId, status) {
-    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, status } : r));
+  // CHANGED: now syncs the new status to the backend
+  async function handleUpdateRoomStatus(roomId, status) {
     const room = rooms.find(r => r.id === roomId);
-    showToast((room ? room.name : 'Room') + ' updated to ' + status + '.');
+    if (!room) return;
+
+    try {
+      await syncRoom({ ...room, status });
+      setRooms(prev => prev.map(r => r.id === roomId ? { ...r, status } : r));
+      showToast(room.name + ' updated to ' + status + '.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not update the room status. Please try again.');
+    }
   }
 
-  // NEW: save edited room details (name, type, price, capacity, amenities)
-  function handleSaveRoom(roomId, formData) {
-    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, ...formData } : r));
-    showToast(formData.name + ' updated.');
+  // CHANGED: sends the full updated room to the backend
+  async function handleSaveRoom(roomId, updates) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    const updatedRoom = { ...room, ...updates };
+
+    try {
+      const saved = await syncRoom(updatedRoom);
+      console.log('Updated:', saved);
+
+      setRooms(prev => prev.map(r => r.id === roomId ? updatedRoom : r));
+      showToast(updatedRoom.name + ' updated.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not save the room. Please try again.');
+    }
+  }
+
+  // CHANGED: removes the room from the backend, but keeps it in the frontend as "deleted" so it can be restored
+  async function handleDeleteRoom(roomId) {
+    const room = rooms.find(r => r.id === roomId);
+
+    // do not delete a room that still has pending/confirmed reservations
+    const hasActiveReservation = reservations.some(
+      r => r.roomId === roomId && (r.status === 'pending' || r.status === 'confirmed')
+    );
+    if (hasActiveReservation) {
+      showToast('Cannot delete a room with pending or confirmed reservations.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/${roomId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+
+      setRooms(prev => prev.map(r => r.id === roomId ? { ...r, deleted: true } : r));
+      showToast((room ? room.name : 'Room') + ' moved to Deleted.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not delete the room. Please try again.');
+    }
+  }
+
+  // CHANGED: puts the room back into the backend
+  async function handleRestoreRoom(roomId) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    try {
+      await syncRoom({ ...room, deleted: false });
+      setRooms(prev => prev.map(r => r.id === roomId ? { ...r, deleted: false } : r));
+      showToast(room.name + ' restored.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not restore the room. Please try again.');
+    }
   }
 
   const activeRoom = rooms.find(r => r.id === activeReserveRoomId);
@@ -162,7 +242,7 @@ export default function App() {
       {currentUser && currentUser.role === 'boarder' && (
         <BoarderView
           currentUser={currentUser}
-          rooms={rooms}
+          rooms={rooms.filter(r => !r.deleted)} // hide deleted rooms from boarders
           reservations={reservations}
           onLogout={handleLogout}
           onOpenReserve={handleOpenReserve}
@@ -178,7 +258,9 @@ export default function App() {
           onApprove={handleApprove}
           onReject={handleReject}
           onUpdateRoomStatus={handleUpdateRoomStatus}
-          onSaveRoom={handleSaveRoom} // NEW
+          onSaveRoom={handleSaveRoom}
+          onDeleteRoom={handleDeleteRoom}
+          onRestoreRoom={handleRestoreRoom}
         />
       )}
 
