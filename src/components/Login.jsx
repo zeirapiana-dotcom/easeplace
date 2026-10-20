@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CREDENTIALS } from '../data/seedData';
 
-export default function Login({ onLogin, onGoogleLogin }) {
+export default function Login({ onLogin, onGoogleLogin, onBack }) {
   const [role, setRole] = useState('boarder');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -128,6 +128,13 @@ export default function Login({ onLogin, onGoogleLogin }) {
 
       <div className="login-panel col-12 col-lg-6 d-flex">
         <div className="login-card">
+          {/* NEW: Back to home button */}
+          {onBack && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: 16 }}>
+              ← Back to home
+            </button>
+          )}
+
           <h2 id="login-heading">{heading}</h2>
           <p className="login-sub" id="login-subtext">{subtext}</p>
           <div className="role-switch">

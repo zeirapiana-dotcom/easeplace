@@ -376,3 +376,73 @@ footer{background:var(--forest-dark); color:#D7DCCF; margin-top:auto;}
   .res-card{flex-direction:column; align-items:flex-start;}
   .res-side{width:100%; justify-content:flex-end;}
 }
+
+/* ==========================================================================
+   Landing page (NEW)
+   ========================================================================== */
+.landing{position:relative; color:#F5F1E2;}
+
+/* fixed na background: parehong image at overlay ng .login-art */
+.landing::before{
+  content:""; position:fixed; inset:0; z-index:0;
+  background:var(--forest) center/cover no-repeat;
+  background-image:url('bg.jpg');
+}
+.landing::after{
+  content:""; position:fixed; inset:0; z-index:0;
+  background:linear-gradient(180deg, rgba(26,46,40,.6) 0%, rgba(26,46,40,.74) 55%, rgba(26,46,40,.92) 100%);
+}
+
+.landing h1, .landing h2, .landing h3{color:#fff;}
+
+.landing-section{
+  position:relative; z-index:1;
+  min-height:100vh; padding:110px 8vw 60px;
+  display:flex; flex-direction:column; justify-content:center;
+}
+
+/* navbar */
+.landing-nav{
+  position:fixed; top:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 8vw;
+  background:rgba(26,46,40,.78); backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(245,241,226,.12);
+}
+.landing-nav-brand{font-family:var(--font-display); font-size:21px; font-weight:600; color:#fff;}
+.landing-nav-links{display:flex; align-items:center; gap:22px;}
+.landing-nav-links button{background:none; border:none; color:#F0ECD9; font-size:14.5px; font-weight:600;}
+.landing-nav-links button:hover{color:var(--gold-tint);}
+.landing-nav-links .landing-login-btn{
+  background:var(--gold); color:#3A2A08; padding:9px 24px; border-radius:999px;
+}
+.landing-nav-links .landing-login-btn:hover{background:var(--gold-dark); color:#fff;}
+
+/* hero */
+.landing-hero-content{max-width:620px; display:flex; flex-direction:column; gap:18px; align-items:flex-start;}
+.landing-hero-content h1{font-size:clamp(2.2rem, 6vw, 3.8rem); line-height:1.1;}
+.landing-hero-content .login-tagline{max-width:520px; font-size:17px;}
+
+.landing-cta{
+  margin-top:20px; align-self:flex-start;
+  padding:13px 30px; border:none; border-radius:999px;
+  background:var(--gold); color:#3A2A08; font-weight:600; font-size:15px;
+  transition:transform .12s ease, background .15s ease;
+}
+.landing-cta:hover{background:var(--gold-dark); color:#fff;}
+.landing-cta:active{transform:scale(.97);}
+.landing-hero-content .landing-cta{margin-top:6px;}
+
+/* features */
+.landing h2{font-size:clamp(1.8rem, 4vw, 2.4rem); margin-bottom:28px;}
+.landing-feature-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px;}
+
+/* about */
+.landing-about-text{max-width:650px; font-size:17px; line-height:1.7; color:#DCE3D6;}
+.landing-foot{margin-top:70px; padding-top:16px; border-top:1px solid rgba(245,241,226,.15); font-size:12.5px; color:#B9C4B4;}
+
+@media (max-width: 720px){
+  .landing-nav{padding:12px 16px;}
+  .landing-nav-links button:not(.landing-login-btn){display:none;}
+  .landing-section{padding:100px 20px 50px;}
+}

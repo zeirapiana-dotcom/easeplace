@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import Login from './components/Login';
+import LandingPage from './components/LandingPage';
 import BoarderView from './components/BoarderView';
 import AdminView from './components/AdminView';
 import ReserveModal from './components/ReserveModal';
@@ -16,6 +17,7 @@ const API_URL = 'http://localhost:8080/api/reservations';
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showLogin, setShowLogin] = useState(false); // NEW: landing page muna, login form pag na-click
   const [rooms, setRooms] = useState(initialRooms);
   const [reservations, setReservations] = useState(initialReservations);
   const [activeReserveRoomId, setActiveReserveRoomId] = useState(null);
@@ -29,7 +31,7 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2600);
   }
 
-  // NEW: send the full room to the backend (adds it if missing, updates if existing)
+  // send the full room to the backend (adds it if missing, updates if existing)
   async function syncRoom(room) {
     const { deleted, ...payload } = room; // the "deleted" flag is frontend-only
     const res = await fetch(`${API_URL}/${room.id}`, {
@@ -101,6 +103,7 @@ export default function App() {
       await signOut(auth);
     }
     setCurrentUser(null);
+    setShowLogin(false); // NEW: bumalik sa landing page pagka-logout
   }
 
   function handleOpenReserve(roomId) {
@@ -140,7 +143,7 @@ export default function App() {
     if (res) {
       const room = rooms.find(r => r.id === res.roomId);
       setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'occupied' } : r));
-      if (room) syncRoom({ ...room, status: 'occupied' }).catch(console.error); // NEW: sync to backend
+      if (room) syncRoom({ ...room, status: 'occupied' }).catch(console.error);
     }
     showToast('Reservation confirmed.');
   }
@@ -152,12 +155,11 @@ export default function App() {
     if (wasConfirmed && res) {
       const room = rooms.find(r => r.id === res.roomId);
       setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'available' } : r));
-      if (room) syncRoom({ ...room, status: 'available' }).catch(console.error); // NEW: sync to backend
+      if (room) syncRoom({ ...room, status: 'available' }).catch(console.error);
     }
     showToast(wasConfirmed ? 'Reservation cancelled.' : 'Reservation rejected.');
   }
 
-  // CHANGED: now syncs the new status to the backend
   async function handleUpdateRoomStatus(roomId, status) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
@@ -172,7 +174,6 @@ export default function App() {
     }
   }
 
-  // CHANGED: sends the full updated room to the backend
   async function handleSaveRoom(roomId, updates) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
@@ -191,7 +192,7 @@ export default function App() {
     }
   }
 
-  // CHANGED: removes the room from the backend, but keeps it in the frontend as "deleted" so it can be restored
+  // removes the room from the backend, but keeps it in the frontend as "deleted" so it can be restored
   async function handleDeleteRoom(roomId) {
     const room = rooms.find(r => r.id === roomId);
 
@@ -216,7 +217,7 @@ export default function App() {
     }
   }
 
-  // CHANGED: puts the room back into the backend
+  // puts the room back into the backend
   async function handleRestoreRoom(roomId) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
@@ -237,7 +238,19 @@ export default function App() {
 
   return (
     <>
-      {!currentUser && <Login onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} />}
+      {/* NEW: landing page muna */}
+      {!currentUser && !showLogin && (
+        <LandingPage onLoginClick={() => setShowLogin(true)} />
+      )}
+
+      {/* Login form: lalabas lang pag na-click ang Login */}
+      {!currentUser && showLogin && (
+        <Login
+          onLogin={handleLogin}
+          onGoogleLogin={handleGoogleLogin}
+          onBack={() => setShowLogin(false)}
+        />
+      )}
 
       {currentUser && currentUser.role === 'boarder' && (
         <BoarderView
