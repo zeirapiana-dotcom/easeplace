@@ -5,20 +5,61 @@ import BoarderView from './components/BoarderView';
 import AdminView from './components/AdminView';
 import ReserveModal from './components/ReserveModal';
 import Toast from './components/Toast';
-import { initialRooms, initialReservations } from './data/seedData';
+import { initialReservations } from './data/seedData';
 import './App.css'
 import RoomsTable from './components/RoomsDataTable';
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-const API_URL = 'http://localhost:8080/api/reservations';
+
+// rooms na ngayon ang kinukuha sa MySQL (easeplace_db)
+const API_URL = 'http://localhost:8080/api/rooms';
+
+// ---------- Mga mapper: database <-> app ----------
+// art (kulay ng room) ayon sa capacity, dahil wala itong column sa database
+const ART_BY_CAPACITY = { 1: 'forest', 2: 'teal', 4: 'coral' };
+
+// database row -> room object na naiintindihan ng AdminView at BoarderView
+function toAppRoom(row) {
+  const num = (String(row.room_name).match(/\d+/) || [''])[0]; // "Room 101" -> "101"
+  return {
+    id: `r${row.room_id}`,
+    name: row.room_name,
+    type: row.room_type,
+    price: Number(row.price),
+    capacity: Number(row.capacity),
+    status: String(row.status).toLowerCase(), // "Available" -> "available"
+    amenities: row.amenities ? row.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
+    art: ART_BY_CAPACITY[Number(row.capacity)] || 'forest',
+    image: `images/room${num}.jpg`,
+    deleted: Boolean(row.deleted),
+  };
+}
+
+// room object ng app -> fields ng database
+function toDbRoom(room) {
+  return {
+    room_name: room.name,
+    room_type: room.type,
+    price: room.price,
+    capacity: room.capacity,
+    status: room.status.charAt(0).toUpperCase() + room.status.slice(1), // "available" -> "Available"
+    amenities: room.amenities.join(', '),
+    deleted: room.deleted ? 1 : 0,
+  };
+}
+
+// "r5" -> 5
+function dbId(id) {
+  return Number(String(id).replace('r', ''));
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false); // NEW: landing page muna, login form pag na-click
-  const [rooms, setRooms] = useState(initialRooms);
+  const [rooms, setRooms] = useState([]); // galing na sa database
   const [reservations, setReservations] = useState(initialReservations);
   const [activeReserveRoomId, setActiveReserveRoomId] = useState(null);
   const [toast, setToast] = useState({ message: '', show: false });
@@ -31,13 +72,33 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2600);
   }
 
-  // send the full room to the backend (adds it if missing, updates if existing)
+  // kunin ang lahat ng rooms (kasama ang deleted) sa database
+  async function loadRooms() {
+    try {
+      const res = await fetch(`${API_URL}?all=1`);
+      if (!res.ok) throw new Error('Failed to load rooms');
+      const data = await res.json();
+      setRooms(data.map(toAppRoom));
+    } catch (err) {
+      console.error('Could not load rooms:', err);
+    }
+  }
+
+  // i-load ang rooms pag naka-login, tapos auto-refresh bawat 3 segundo
+  // (para lumabas sa dashboard ang edit/delete mo sa phpMyAdmin)
+  useEffect(() => {
+    if (!currentUser) return;
+    loadRooms();
+    const timer = setInterval(loadRooms, 3000);
+    return () => clearInterval(timer);
+  }, [currentUser]);
+
+  // ipadala ang buong room sa backend (update sa MySQL)
   async function syncRoom(room) {
-    const { deleted, ...payload } = room; // the "deleted" flag is frontend-only
-    const res = await fetch(`${API_URL}/${room.id}`, {
+    const res = await fetch(`${API_URL}/${dbId(room.id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(toDbRoom(room)),
     });
     if (!res.ok) throw new Error('Sync failed');
     return res.json();
@@ -192,7 +253,7 @@ export default function App() {
     }
   }
 
-  // removes the room from the backend, but keeps it in the frontend as "deleted" so it can be restored
+  // soft delete: nagiging deleted = 1 sa database, kaya pwede pang i-restore
   async function handleDeleteRoom(roomId) {
     const room = rooms.find(r => r.id === roomId);
 
@@ -206,7 +267,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/${roomId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/${dbId(roomId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
 
       setRooms(prev => prev.map(r => r.id === roomId ? { ...r, deleted: true } : r));
@@ -217,7 +278,7 @@ export default function App() {
     }
   }
 
-  // puts the room back into the backend
+  // ibalik ang room (deleted = 0 sa database)
   async function handleRestoreRoom(roomId) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
@@ -233,6 +294,9 @@ export default function App() {
   }
 
   const activeRoom = rooms.find(r => r.id === activeReserveRoomId);
+
+  // TEMPORARY: buksan ang http://localhost:5173/?test=rooms para i-test ang RoomsManager
+  if (window.location.search === '?test=rooms') return <RoomsManager />;
 
   if (authLoading) return <h2>Loading Application State...</h2>;
 

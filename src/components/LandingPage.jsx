@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 
 const aboutSlides = [
-  { src: '/images/about-1.jpg', caption: 'Cozy and comfortable rooms' },
+  { src: '/images/about-1.jpg', caption: 'Safe, accessible location' },
   { src: '/images/about-2.jpg', caption: 'A warm and welcoming common area' },
-  { src: '/images/about-3.jpg', caption: 'Safe, accessible location' },
+  { src: '/images/about-3.jpg', caption: 'Cozy and comfortable rooms' },
 ];
 
 export default function LandingPage({ onLoginClick }) {
