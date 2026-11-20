@@ -6,15 +6,26 @@ import BoarderView from './components/BoarderView';
 import AdminView from './components/AdminView';
 import ReserveModal from './components/ReserveModal';
 import Toast from './components/Toast';
-import { initialReservations } from './data/seedData';
 import './App.css'
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
-// rooms na ngayon ang kinukuha sa MySQL (easeplace_db)
-const API_URL = 'http://localhost:8080/api/rooms';
+// rooms at reservations ay kinukuha sa MySQL (easeplace_db)
+const API_BASE = 'http://localhost:8080/api';
+const API_URL = `${API_BASE}/rooms`;
+const RES_URL = `${API_BASE}/reservations`;
+
+// fetch na may kasamang Firebase ID token (kailangan ng backend para malaman kung sino ka at ang role mo)
+async function authFetch(url, options = {}) {
+  if (!auth.currentUser) throw new Error('Not signed in');
+  const token = await auth.currentUser.getIdToken();
+  return fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+  });
+}
 
 // ---------- Mga mapper: database <-> app ----------
 // art (kulay ng room) ayon sa capacity, dahil wala itong column sa database
@@ -50,9 +61,30 @@ function toDbRoom(room) {
   };
 }
 
+// database row -> reservation object na naiintindihan ng AdminView at BoarderView
+function toAppReservation(row) {
+  return {
+    id: `res${row.reservation_id}`,
+    roomId: `r${row.room_id}`,
+    guestName: row.guest_name,
+    contact: row.contact,
+    moveIn: String(row.move_in).slice(0, 10),
+    months: Number(row.months),
+    notes: row.notes || '',
+    status: row.status,
+    username: row.username,
+    createdAt: String(row.created_at).slice(0, 10),
+  };
+}
+
 // "r5" -> 5
 function dbId(id) {
   return Number(String(id).replace('r', ''));
+}
+
+// "res7" -> 7
+function dbResId(id) {
+  return Number(String(id).replace('res', ''));
 }
 
 export default function App() {
@@ -60,10 +92,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [rooms, setRooms] = useState([]); // galing na sa database
-  const [reservations, setReservations] = useState(initialReservations);
+  const [reservations, setReservations] = useState([]); // galing na rin sa database
   const [activeReserveRoomId, setActiveReserveRoomId] = useState(null);
   const [toast, setToast] = useState({ message: '', show: false });
-  const resIdCounter = useRef(4);
   const toastTimer = useRef(null);
 
   function showToast(message) {
@@ -75,7 +106,7 @@ export default function App() {
   // kunin ang lahat ng rooms (kasama ang deleted) sa database
   async function loadRooms() {
     try {
-      const res = await fetch(`${API_URL}?all=1`);
+      const res = await authFetch(`${API_URL}?all=1`);
       if (!res.ok) throw new Error('Failed to load rooms');
       const data = await res.json();
       setRooms(data.map(toAppRoom));
@@ -84,24 +115,54 @@ export default function App() {
     }
   }
 
-  // i-load ang rooms pag naka-login, tapos auto-refresh bawat 3 segundo
+  // admin: lahat ng reservations | boarder: sarili lang niya (ang server ang nagpapasya)
+  async function loadReservations() {
+    try {
+      const res = await authFetch(RES_URL);
+      if (!res.ok) throw new Error('Failed to load reservations');
+      const data = await res.json();
+      setReservations(data.map(toAppReservation));
+    } catch (err) {
+      console.error('Could not load reservations:', err);
+    }
+  }
+
+  // i-load ang rooms at reservations pag naka-login, tapos auto-refresh bawat 3 segundo
   // (para lumabas sa dashboard ang edit/delete mo sa phpMyAdmin)
   useEffect(() => {
     if (!currentUser) return;
     loadRooms();
-    const timer = setInterval(loadRooms, 3000);
+    loadReservations();
+    const timer = setInterval(() => {
+      loadRooms();
+      loadReservations();
+    }, 3000);
     return () => clearInterval(timer);
   }, [currentUser]);
 
   // ipadala ang buong room sa backend (update sa MySQL)
   async function syncRoom(room) {
-    const res = await fetch(`${API_URL}/${dbId(room.id)}`, {
+    const res = await authFetch(`${API_URL}/${dbId(room.id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(toDbRoom(room)),
     });
     if (!res.ok) throw new Error('Sync failed');
     return res.json();
+  }
+
+  // palitan ang status ng reservation sa database (ang server na ang nag-a-update ng room status)
+  async function updateReservationStatus(id, status) {
+    const res = await authFetch(`${RES_URL}/${dbResId(id)}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || 'Update failed');
+    }
+    await Promise.all([loadReservations(), loadRooms()]);
   }
 
   // 1. Authentication, User Synchronization, & Role Retrieval
@@ -158,6 +219,7 @@ export default function App() {
   async function handleLogout() {
     await signOut(auth);
     setCurrentUser(null);
+    setReservations([]);
     navigate('/'); // bumalik sa landing page pagka-logout
   }
 
@@ -169,50 +231,70 @@ export default function App() {
     setActiveReserveRoomId(null);
   }
 
-  function handleSubmitReservation(formData) {
+  // CREATE: i-save ang bagong reservation sa database
+  async function handleSubmitReservation(formData) {
     if (!formData) {
       showToast('Please complete all required fields.');
       return;
     }
-    const newRes = {
-      id: 'res' + (resIdCounter.current++),
-      roomId: activeReserveRoomId,
-      ...formData,
-      status: 'pending',
-      username: currentUser.username,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setReservations(prev => [...prev, newRes]);
-    setActiveReserveRoomId(null);
-    showToast('Reservation submitted! Wait for admin confirmation.');
-  }
-
-  function handleCancelReservation(id) {
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
-    showToast('Reservation cancelled.');
-  }
-
-  function handleApprove(id) {
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'confirmed' } : r));
-    const res = reservations.find(r => r.id === id);
-    if (res) {
-      const room = rooms.find(r => r.id === res.roomId);
-      setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'occupied' } : r));
-      if (room) syncRoom({ ...room, status: 'occupied' }).catch(console.error);
+    try {
+      const res = await authFetch(RES_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_id: dbId(activeReserveRoomId),
+          guest_name: formData.guestName,
+          contact: formData.contact,
+          move_in: formData.moveIn,
+          months: formData.months,
+          notes: formData.notes,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Submit failed');
+      }
+      setActiveReserveRoomId(null);
+      await loadReservations();
+      showToast('Reservation submitted! Wait for admin confirmation.');
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof TypeError
+        ? 'Could not reach the server. Please try again.'
+        : err.message);
     }
-    showToast('Reservation confirmed.');
   }
 
-  function handleReject(id) {
+  async function handleCancelReservation(id) {
+    try {
+      await updateReservationStatus(id, 'cancelled');
+      showToast('Reservation cancelled.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not cancel the reservation. Please try again.');
+    }
+  }
+
+  async function handleApprove(id) {
+    try {
+      await updateReservationStatus(id, 'confirmed');
+      showToast('Reservation confirmed.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not confirm the reservation. Please try again.');
+    }
+  }
+
+  async function handleReject(id) {
     const res = reservations.find(r => r.id === id);
     const wasConfirmed = res && res.status === 'confirmed';
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'cancelled' } : r));
-    if (wasConfirmed && res) {
-      const room = rooms.find(r => r.id === res.roomId);
-      setRooms(prev => prev.map(r => r.id === res.roomId ? { ...r, status: 'available' } : r));
-      if (room) syncRoom({ ...room, status: 'available' }).catch(console.error);
+    try {
+      await updateReservationStatus(id, 'cancelled');
+      showToast(wasConfirmed ? 'Reservation cancelled.' : 'Reservation rejected.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not update the reservation. Please try again.');
     }
-    showToast(wasConfirmed ? 'Reservation cancelled.' : 'Reservation rejected.');
   }
 
   async function handleUpdateRoomStatus(roomId, status) {
@@ -261,7 +343,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/${dbId(roomId)}`, { method: 'DELETE' });
+      const res = await authFetch(`${API_URL}/${dbId(roomId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
 
       setRooms(prev => prev.map(r => r.id === roomId ? { ...r, deleted: true } : r));

@@ -9,37 +9,25 @@ export default function ReserveModal({ room, currentUserName, onClose, onSubmit 
   const [months, setMonths] = useState(6);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const api_url = 'http://localhost:8080/api/reservations';
 
   async function formSubmit(e) {
     e.preventDefault();
 
-    if (!name.trim() || !contact.trim() || !moveIn || !months || months < 1) {
+    if (!name.trim() || !contact.trim() || !moveIn || !months || Number(months) < 1) {
       onSubmit(null); // signal invalid -> parent shows toast
       return;
     }
 
-    try {
-      const response = await fetch(api_url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name,
-          contact: contact,
-          moveIn: moveIn,
-          months: months,
-
-        })
-      });
-// pass back the saved reservation to the parent
-    } catch (err) {
-      console.log(err);
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    // ang App na ang magpapadala sa API at magsasara ng modal kapag matagumpay
+    setSubmitting(true);
+    await onSubmit({
+      guestName: name.trim(),
+      contact: contact.trim(),
+      moveIn,
+      months: Number(months),
+      notes: notes.trim(),
+    });
+    setSubmitting(false);
   }
 
   return (
@@ -50,8 +38,6 @@ export default function ReserveModal({ room, currentUserName, onClose, onSubmit 
           <button className="modal-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <p className="modal-sub">{room.type} · {peso(room.price)} per month. We will confirm within 24 hours.</p>
-
-        {error && <p style={{ color: 'var(--coral-dark)' }}>Error: {error}</p>}
 
         <form onSubmit={formSubmit}>
           <div className="field">
