@@ -1,8 +1,3 @@
-export const CREDENTIALS = {
-  boarder: { username: 'zeira', password: 'boarder123', name: 'Zeira Piana' },
-  admin: { username: 'admin', password: 'admin123', name: 'Admin' }
-};
-
 export const ART_PALETTE = {
   forest: { wall: '#E1E9E4', roof: '#26433A', bed: '#26433A', accent: '#C9932E' },
   gold:   { wall: '#F5E7C7', roof: '#8F6717', bed: '#8F6717', accent: '#26433A' },
