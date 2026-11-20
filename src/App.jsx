@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import Login from './components/Login';
 import LandingPage from './components/LandingPage';
 import BoarderView from './components/BoarderView';
@@ -7,7 +8,6 @@ import ReserveModal from './components/ReserveModal';
 import Toast from './components/Toast';
 import { initialReservations } from './data/seedData';
 import './App.css'
-import RoomsTable from './components/RoomsDataTable';
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -56,9 +56,9 @@ function dbId(id) {
 }
 
 export default function App() {
+  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [showLogin, setShowLogin] = useState(false); // NEW: landing page muna, login form pag na-click
   const [rooms, setRooms] = useState([]); // galing na sa database
   const [reservations, setReservations] = useState(initialReservations);
   const [activeReserveRoomId, setActiveReserveRoomId] = useState(null);
@@ -164,7 +164,7 @@ export default function App() {
       await signOut(auth);
     }
     setCurrentUser(null);
-    setShowLogin(false); // NEW: bumalik sa landing page pagka-logout
+    navigate('/'); // bumalik sa landing page pagka-logout
   }
 
   function handleOpenReserve(roomId) {
@@ -295,51 +295,66 @@ export default function App() {
 
   const activeRoom = rooms.find(r => r.id === activeReserveRoomId);
 
-  // TEMPORARY: buksan ang http://localhost:5173/?test=rooms para i-test ang RoomsManager
-  if (window.location.search === '?test=rooms') return <RoomsManager />;
-
   if (authLoading) return <h2>Loading Application State...</h2>;
 
   return (
     <>
-      {/* NEW: landing page muna */}
-      {!currentUser && !showLogin && (
-        <LandingPage onLoginClick={() => setShowLogin(true)} />
-      )}
+      <Routes>
+        <Route path="/" element={
+          currentUser ? <Navigate to="/dashboard" replace />
+            : <LandingPage onLoginClick={() => navigate('/login')} />
+        } />
 
-      {/* Login form: lalabas lang pag na-click ang Login */}
-      {!currentUser && showLogin && (
-        <Login
-          onLogin={handleLogin}
-          onGoogleLogin={handleGoogleLogin}
-          onBack={() => setShowLogin(false)}
-        />
-      )}
+        <Route path="/login" element={
+          currentUser ? <Navigate to="/dashboard" replace />
+            : <Login onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onBack={() => navigate('/')} />
+        } />
 
-      {currentUser && currentUser.role === 'boarder' && (
-        <BoarderView
-          currentUser={currentUser}
-          rooms={rooms.filter(r => !r.deleted)} // hide deleted rooms from boarders
-          reservations={reservations}
-          onLogout={handleLogout}
-          onOpenReserve={handleOpenReserve}
-          onCancelReservation={handleCancelReservation}
-        />
-      )}
+        {/* /dashboard: ipapadala ka sa tamang page ayon sa role */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute currentUser={currentUser}>
+            <Navigate to={currentUser?.role === 'admin' ? '/admin' : '/boarder'} replace />
+          </ProtectedRoute>
+        } />
 
-      {currentUser && currentUser.role === 'admin' && (
-        <AdminView
-          rooms={rooms}
-          reservations={reservations}
-          onLogout={handleLogout}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onUpdateRoomStatus={handleUpdateRoomStatus}
-          onSaveRoom={handleSaveRoom}
-          onDeleteRoom={handleDeleteRoom}
-          onRestoreRoom={handleRestoreRoom}
-        />
-      )}
+        <Route path="/boarder" element={
+          <ProtectedRoute currentUser={currentUser} allowedRoles={['boarder']}>
+            <BoarderView
+              currentUser={currentUser}
+              rooms={rooms.filter(r => !r.deleted)} // hide deleted rooms from boarders
+              reservations={reservations}
+              onLogout={handleLogout}
+              onOpenReserve={handleOpenReserve}
+              onCancelReservation={handleCancelReservation}
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin" element={
+          <ProtectedRoute currentUser={currentUser} allowedRoles={['admin']}>
+            <AdminView
+              rooms={rooms}
+              reservations={reservations}
+              onLogout={handleLogout}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onUpdateRoomStatus={handleUpdateRoomStatus}
+              onSaveRoom={handleSaveRoom}
+              onDeleteRoom={handleDeleteRoom}
+              onRestoreRoom={handleRestoreRoom}
+            />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute currentUser={currentUser}>
+            <Profile currentUser={currentUser} onLogout={handleLogout} />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/access-denied" element={<AccessDenied />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
 
       {activeRoom && (
         <ReserveModal
@@ -352,5 +367,54 @@ export default function App() {
 
       <Toast message={toast.message} show={toast.show} />
     </>
+  );
+}
+
+// ---------- Routing helpers ----------
+function ProtectedRoute({ currentUser, allowedRoles, children }) {
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+  return children;
+}
+
+function NotFound() {
+  return (
+    <div className="container text-center py-5">
+      <h1 className="display-1 fw-bold">404</h1>
+      <p className="text-muted">Page not found.</p>
+      <Link to="/" className="btn btn-primary">Back to home</Link>
+    </div>
+  );
+}
+
+function AccessDenied() {
+  return (
+    <div className="container text-center py-5">
+      <h1 className="fw-bold">Access Denied</h1>
+      <p className="text-muted">You do not have permission to view this page.</p>
+      <Link to="/dashboard" className="btn btn-primary">Go to my dashboard</Link>
+    </div>
+  );
+}
+
+function Profile({ currentUser, onLogout }) {
+  return (
+    <div className="container py-5" style={{ maxWidth: 480 }}>
+      <div className="card shadow-sm p-4 text-center">
+        {currentUser.photoURL && (
+          <img src={currentUser.photoURL} alt="Profile" referrerPolicy="no-referrer"
+            className="rounded-circle mx-auto mb-3" width="96" height="96" />
+        )}
+        <h3>{currentUser.name}</h3>
+        <p className="text-muted mb-2">{currentUser.username}</p>
+        <span className="badge bg-success mx-auto mb-4 text-capitalize">{currentUser.role}</span>
+        <div className="d-flex gap-2 justify-content-center">
+          <Link to="/dashboard" className="btn btn-outline-secondary">Back</Link>
+          <button className="btn btn-danger" onClick={onLogout}>Log out</button>
+        </div>
+      </div>
+    </div>
   );
 }
