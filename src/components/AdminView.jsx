@@ -36,7 +36,7 @@ const PAGE_INFO = {
   rooms: { title: 'Rooms', sub: 'Manage room details, availability and listings.' },
 };
 
-export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus, onSaveRoom, onDeleteRoom, onRestoreRoom }) {
+export default function AdminView({ rooms, reservations, onLogout, onApprove, onReject, onUpdateRoomStatus, onSaveRoom, onAddRoom, onDeleteRoom, onRestoreRoom }) {
   const [tab, setTab] = useState('overview');
   const [filter, setFilter] = useState('all');
   const [roomView, setRoomView] = useState('active'); // 'active' | 'deleted'
@@ -44,9 +44,11 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
 
   // Edit room state and functions
   const [editingRoom, setEditingRoom] = useState(null);
-  const [form, setForm] = useState({ name: '', type: '', price: '', capacity: '', amenities: '' });
+  const [adding, setAdding] = useState(false); // true = Add room form, false = Edit room form
+  const [form, setForm] = useState({ name: '', type: '', price: '', capacity: '', amenities: '', status: 'available' });
 
   function openEdit(room) {
+    setAdding(false);
     setEditingRoom(room);
     setForm({
       name: room.name,
@@ -54,7 +56,19 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
       price: room.price,
       capacity: room.capacity,
       amenities: room.amenities.join(', '),
+      status: room.status,
     });
+  }
+
+  function openAdd() {
+    setEditingRoom(null);
+    setAdding(true);
+    setForm({ name: '', type: '', price: '', capacity: '', amenities: '', status: 'available' });
+  }
+
+  function closeModal() {
+    setEditingRoom(null);
+    setAdding(false);
   }
 
   function handleFormChange(e) {
@@ -65,14 +79,20 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
     e.preventDefault();
     if (!form.name.trim() || !form.type.trim() || Number(form.price) < 0 || Number(form.capacity) < 1) return;
 
-    onSaveRoom(editingRoom.id, {
+    const data = {
       name: form.name.trim(),
       type: form.type.trim(),
       price: Number(form.price),
       capacity: Number(form.capacity),
       amenities: form.amenities.split(',').map(a => a.trim()).filter(Boolean),
-    });
-    setEditingRoom(null);
+    };
+
+    if (adding) {
+      onAddRoom({ ...data, status: form.status });
+    } else {
+      onSaveRoom(editingRoom.id, data);
+    }
+    closeModal();
   }
 
   // Delete room (soft delete, with confirmation)
@@ -392,14 +412,17 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
             <section>
               <div className="section-head">
                 <h2>Room management</h2>
-                {/* Active / Deleted filter */}
-                <div className="chip-filters">
-                  <button className={`chip-filter${roomView === 'active' ? ' active' : ''}`} onClick={() => setRoomView('active')}>
-                    Active ({activeRooms.length})
-                  </button>
-                  <button className={`chip-filter${roomView === 'deleted' ? ' active' : ''}`} onClick={() => setRoomView('deleted')}>
-                    Deleted ({deletedRooms.length})
-                  </button>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button className="btn btn-primary btn-sm" onClick={openAdd}>+ Add room</button>
+                  {/* Active / Deleted filter */}
+                  <div className="chip-filters">
+                    <button className={`chip-filter${roomView === 'active' ? ' active' : ''}`} onClick={() => setRoomView('active')}>
+                      Active ({activeRooms.length})
+                    </button>
+                    <button className={`chip-filter${roomView === 'deleted' ? ' active' : ''}`} onClick={() => setRoomView('deleted')}>
+                      Deleted ({deletedRooms.length})
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -456,13 +479,13 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
         </main>
       </div>
 
-      {/* Edit room modal */}
-      {editingRoom && (
+      {/* Add / Edit room modal */}
+      {(editingRoom || adding) && (
         <div className="modal-overlay">
           <div className="modal-card">
             <div className="modal-head">
-              <h2>Edit {editingRoom.name}</h2>
-              <button className="modal-close" onClick={() => setEditingRoom(null)} aria-label="Close">✕</button>
+              <h2>{adding ? 'Add new room' : `Edit ${editingRoom.name}`}</h2>
+              <button className="modal-close" onClick={closeModal} aria-label="Close">✕</button>
             </div>
             <form onSubmit={saveEdit}>
               <div className="field">
@@ -485,7 +508,17 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
                 <label htmlFor="room-amenities">Amenities (separate with commas)</label>
                 <input type="text" id="room-amenities" name="amenities" value={form.amenities} onChange={handleFormChange} />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Save changes</button>
+              {adding && (
+                <div className="field">
+                  <label htmlFor="room-status">Status</label>
+                  <select id="room-status" name="status" value={form.status} onChange={handleFormChange}>
+                    <option value="available">Available</option>
+                    <option value="occupied">Occupied</option>
+                    <option value="maintenance">Under maintenance</option>
+                  </select>
+                </div>
+              )}
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>{adding ? 'Add room' : 'Save changes'}</button>
             </form>
           </div>
         </div>

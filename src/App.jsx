@@ -297,6 +297,28 @@ export default function App() {
     }
   }
 
+  // CREATE: magdagdag ng bagong room sa database (admin lang)
+  async function handleAddRoom(newRoom) {
+    try {
+      const res = await authFetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toDbRoom({ ...newRoom, deleted: false })),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Add failed');
+      }
+      await loadRooms();
+      showToast(newRoom.name + ' added.');
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof TypeError
+        ? 'Could not reach the server. Please try again.'
+        : err.message);
+    }
+  }
+
   async function handleUpdateRoomStatus(roomId, status) {
     const room = rooms.find(r => r.id === roomId);
     if (!room) return;
@@ -416,6 +438,7 @@ export default function App() {
               onReject={handleReject}
               onUpdateRoomStatus={handleUpdateRoomStatus}
               onSaveRoom={handleSaveRoom}
+              onAddRoom={handleAddRoom}
               onDeleteRoom={handleDeleteRoom}
               onRestoreRoom={handleRestoreRoom}
             />
