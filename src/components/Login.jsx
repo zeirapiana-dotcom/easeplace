@@ -1,43 +1,21 @@
 import { useState } from 'react';
-import { CREDENTIALS } from '../data/seedData';
 
-export default function Login({ onLogin, onGoogleLogin, onBack }) {
-  const [role, setRole] = useState('boarder');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login({ onGoogleLogin, onBack }) {
   const [error, setError] = useState('');
-
-  const isBoarder = role === 'boarder';
-  const heading = isBoarder ? 'Welcome!' : 'Admin';
-  const subtext = isBoarder
-    ? 'Sign in to browse rooms and manage your reservation.'
-    : 'Monitor rooms and manage reservation requests.';
- 
-
-  function handleRoleChange(nextRole) {
-    setRole(nextRole);
-    setError('');
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const cred = CREDENTIALS[role];
-    if (username.trim() === cred.username && password === cred.password) {
-      setError('');
-      setUsername('');
-      setPassword('');
-      onLogin({ role, username: cred.username, name: cred.name });
-    } else {
-      setError('Incorrect username or password. Please try the demo credentials below.');
-    }
-  }
+  const [loading, setLoading] = useState(false);
 
   async function handleGoogleClick() {
     setError('');
+    setLoading(true);
     try {
       await onGoogleLogin();
     } catch (err) {
-      setError('Google sign-in failed. Please try again.');
+      // hindi error kapag sinadyang isara ng user ang popup
+      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        setError('Google sign-in failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -127,59 +105,65 @@ export default function Login({ onLogin, onGoogleLogin, onBack }) {
       </div>
 
       <div className="login-panel col-12 col-lg-6 d-flex">
-        <div className="login-card">
-          {/* NEW: Back to home button */}
+        <div
+          className="login-card"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-card)',
+            padding: 'clamp(24px, 5vw, 40px)',
+            maxWidth: 420,
+          }}
+        >
           {onBack && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onBack} style={{ marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={onBack}
+              style={{ background: 'none', border: 'none', padding: 0, marginBottom: 24, fontSize: 13.5, fontWeight: 600, color: 'var(--ink-soft)' }}
+            >
               ← Back to home
             </button>
           )}
 
-          <h2 id="login-heading">{heading}</h2>
-          <p className="login-sub" id="login-subtext">{subtext}</p>
-          <div className="role-switch">
-            <button type="button" className={isBoarder ? 'active' : ''} onClick={() => handleRoleChange('boarder')}>Boarder</button>
-            <button type="button" className={!isBoarder ? 'active' : ''} onClick={() => handleRoleChange('admin')}>Admin</button>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <h2 id="login-heading" style={{ fontSize: 30, marginBottom: 8 }}>Welcome!</h2>
+            <p className="login-sub" id="login-subtext" style={{ margin: 0 }}>
+              Sign in to browse rooms and manage your reservations.
+            </p>
           </div>
-          {error && <div className="login-error">{error}</div>}
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label htmlFor="login-username">Username</label>
-              <input type="text" id="login-username" autoComplete="username" placeholder="Full Name"
-                value={username} onChange={(e) => setUsername(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="login-password">Password</label>
-              <input type="password" id="login-password" autoComplete="current-password" placeholder="Enter your password"
-                value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 6 }}>Sign in</button>
-          </form>
 
-          {/* Extra sign-in option: Google, added alongside the existing
-              username/password form. Does not replace the form above. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-          </div>
+          {error && <div className="login-error">{error}</div>}
+
           <button
             type="button"
             className="btn btn-ghost"
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+            disabled={loading}
+            style={{
+              width: '100%', minHeight: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 12, background: '#fff', fontWeight: 600, fontSize: 15,
+            }}
             onClick={handleGoogleClick}
           >
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
               <path fill="#FFC107" d="M43.6 20.5H42V20.4H24v7.2h11.3C33.7 32 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8.1 3.1l5.1-5.1C33.9 6.1 29.2 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
               <path fill="#FF3D00" d="M6.3 14.7l5.9 4.3C13.7 15.6 18.5 12.2 24 12.2c3.1 0 5.9 1.2 8.1 3.1l5.1-5.1C33.9 6.1 29.2 4 24 4c-7.4 0-13.7 4-17.7 10.7z" />
               <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.4 26.7 36 24 36c-5.3 0-9.6-3-11.3-7.3l-6.1 4.7C10.1 39.9 16.6 44 24 44z" />
               <path fill="#1976D2" d="M43.6 20.5H42V20.4H24v7.2h11.3c-1 3-3 5.5-5.9 7.1l6.2 5.2C39.7 37.1 44 31.3 44 24c0-1.3-.1-2.7-.4-3.5z" />
             </svg>
-            Sign in with Google
+            {loading ? 'Signing in...' : 'Continue with Google'}
           </button>
 
-          <p className="login-help-link">Need help signing in? <a href="mailto:zeirapiana@gmail.com">Contact the property manager</a></p>
-          <p className="login-mini-foot">© 2026 EasePlace Boarding House. All rights reserved.</p>
+          <p style={{ margin: '16px 0 0', padding: '12px 14px', background: 'var(--forest-tint)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--forest-dark)', textAlign: 'center' }}>
+            New here? Your boarder account is created automatically the first time you sign in.
+          </p>
+
+          <div style={{ borderTop: '1px solid var(--line)', marginTop: 28, paddingTop: 18 }}>
+            <p className="login-help-link" style={{ margin: 0 }}>
+              Need help signing in? <a href="mailto:zeirapiana@gmail.com">Contact the property manager</a>
+            </p>
+            <p className="login-mini-foot" style={{ marginTop: 8, marginBottom: 0 }}>© 2026 EasePlace Boarding House. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </div>

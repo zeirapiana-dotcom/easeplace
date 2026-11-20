@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import RoomArt from './RoomArt';
 import { peso, formatDate, initials } from '../utils/helpers';
 
@@ -61,10 +62,11 @@ export default function BoarderView({ currentUser, rooms, reservations, onLogout
           </nav>
 
           <div className="bd-user">
-            <div className="user-chip">
+            {/* Click the name/avatar to open the Profile page */}
+            <Link to="/profile" className="user-chip" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="avatar">{initials(currentUser.name)}</div>
               <div className="user-meta"><strong>{currentUser.name}</strong>Boarder</div>
-            </div>
+            </Link>
             <button type="button" className="btn btn-ghost btn-sm" onClick={onLogout}>Log out</button>
           </div>
         </div>

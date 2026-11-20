@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ART_PALETTE } from '../data/seedData';
 import { peso, formatDate } from '../utils/helpers';
 
@@ -187,10 +188,11 @@ export default function AdminView({ rooms, reservations, onLogout, onApprove, on
         </nav>
 
         <div className="admin-side-foot">
-          <div className="admin-side-user">
+          {/* Click to open the Profile page */}
+          <Link to="/profile" className="admin-side-user" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="avatar">A</div>
             <div className="user-meta"><strong>Admin</strong>Property manager</div>
-          </div>
+          </Link>
           <button type="button" className="admin-logout" onClick={onLogout}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

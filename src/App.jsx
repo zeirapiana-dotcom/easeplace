@@ -104,10 +104,6 @@ export default function App() {
     return res.json();
   }
 
-  function handleLogin(user) {
-    setCurrentUser(user);
-  }
-
   // 1. Authentication, User Synchronization, & Role Retrieval
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -160,9 +156,7 @@ export default function App() {
 
   // Logout Handler
   async function handleLogout() {
-    if (currentUser && currentUser.provider === 'google') {
-      await signOut(auth);
-    }
+    await signOut(auth);
     setCurrentUser(null);
     navigate('/'); // bumalik sa landing page pagka-logout
   }
@@ -307,7 +301,7 @@ export default function App() {
 
         <Route path="/login" element={
           currentUser ? <Navigate to="/dashboard" replace />
-            : <Login onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onBack={() => navigate('/')} />
+            : <Login onGoogleLogin={handleGoogleLogin} onBack={() => navigate('/')} />
         } />
 
         {/* /dashboard: ipapadala ka sa tamang page ayon sa role */}
