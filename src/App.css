@@ -80,7 +80,7 @@ a{color:inherit;}
   flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;
   background:var(--forest) center/cover no-repeat;
   min-height:100vh;
-  background-image: url('bg.jpg');
+  background-image: url('/images/bg.jpg');
 }
 .login-art::before{
   content:"";
@@ -304,7 +304,7 @@ footer{background:var(--forest-dark); color:#D7DCCF; margin-top:auto;}
 .landing::before{
   content:""; position:fixed; inset:0; z-index:0;
   background:var(--forest) center/cover no-repeat;
-  background-image:url('bg.jpg');
+  background-image:url('/images/bg.jpg');
 }
 .landing::after{
   content:""; position:fixed; inset:0; z-index:0;
@@ -707,7 +707,7 @@ footer{background:var(--forest-dark); color:#D7DCCF; margin-top:auto;}
   padding:46px 46px 76px; border-radius:var(--radius-lg);
   color:#F5F1E2;
   background:var(--forest) center/cover no-repeat;
-  background-image:url('bg.jpg');
+  background-image:url('/images/bg.jpg');
 }
 .bd-hero::before{
   content:""; position:absolute; inset:0;

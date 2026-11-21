@@ -20,11 +20,36 @@ const RES_URL = `${API_BASE}/reservations`;
 // fetch na may kasamang Firebase ID token (kailangan ng backend para malaman kung sino ka at ang role mo)
 async function authFetch(url, options = {}) {
   if (!auth.currentUser) throw new Error('Not signed in');
-  const token = await auth.currentUser.getIdToken();
+
+  // Kapag offline at expired na ang token, hindi na ito mare-refresh. Itutuloy ang request
+  // nang walang token para ang service worker (Network-First) ang sasagot gamit ang cache.
+  let token = null;
+  try {
+    token = await auth.currentUser.getIdToken();
+  } catch (err) {
+    if (navigator.onLine) throw err;
+  }
+
   return fetch(url, {
     ...options,
-    headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+    headers: { ...(options.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
+}
+
+// Itinatago ang huling nakuhang role para makapasok pa rin ang user kahit offline
+// (ang UI lang ang gumagamit nito; ang server pa rin ang nagve-verify ng totoong role)
+const ROLE_CACHE_KEY = 'easeplace_role';
+function saveCachedRole(uid, role) {
+  try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ uid, role })); } catch { /* ignore */ }
+}
+function readCachedRole(uid) {
+  try {
+    const data = JSON.parse(localStorage.getItem(ROLE_CACHE_KEY));
+    return data && data.uid === uid ? data.role : null;
+  } catch { return null; }
+}
+function clearCachedRole() {
+  try { localStorage.removeItem(ROLE_CACHE_KEY); } catch { /* ignore */ }
 }
 
 // ---------- Mga mapper: database <-> app ----------
@@ -169,12 +194,13 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        let role = null;
         try {
           // Reference to user's profile document in Firestore
           const userRef = doc(db, 'users', firebaseUser.uid);
           const userSnap = await getDoc(userRef);
 
-          let role = 'boarder';
+          role = 'boarder';
 
           if (userSnap.exists()) {
             // Fetch existing role
@@ -190,6 +216,15 @@ export default function App() {
             });
           }
 
+          // i-save ang huling role para magamit kapag offline
+          saveCachedRole(firebaseUser.uid, role);
+        } catch (error) {
+          console.error('Failed to load user profile:', error);
+          // offline? gamitin ang huling naka-save na role
+          role = readCachedRole(firebaseUser.uid);
+        }
+
+        if (role) {
           setCurrentUser({
             role,
             username: firebaseUser.email,
@@ -197,8 +232,7 @@ export default function App() {
             photoURL: firebaseUser.photoURL,
             provider: 'google'
           });
-        } catch (error) {
-          console.error('Failed to load user profile:', error);
+        } else {
           showToast('Could not load your profile. Please try again.');
         }
       } else {
@@ -218,6 +252,8 @@ export default function App() {
   // Logout Handler
   async function handleLogout() {
     await signOut(auth);
+    clearCachedRole();
+    if ('caches' in window) caches.delete('api-cache'); // huwag maiwan ang data ng user sa device
     setCurrentUser(null);
     setReservations([]);
     navigate('/'); // bumalik sa landing page pagka-logout
@@ -464,6 +500,7 @@ export default function App() {
         />
       )}
 
+      <OfflineBanner />
       <Toast message={toast.message} show={toast.show} />
     </>
   );
@@ -514,6 +551,38 @@ function Profile({ currentUser, onLogout }) {
           <button className="btn btn-danger" onClick={onLogout}>Log out</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------- Offline banner ----------
+function OfflineBanner() {
+  const [online, setOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  if (online) return null;
+
+  return (
+    <div
+      role="status"
+      style={{
+        position: 'fixed', left: 16, bottom: 16, zIndex: 3000,
+        background: '#7E3A2A', color: '#fff', padding: '10px 18px', borderRadius: 999,
+        fontSize: 14, fontWeight: 600, boxShadow: '0 6px 20px rgba(0,0,0,.25)',
+        maxWidth: 'calc(100% - 32px)',
+      }}
+    >
+      You are offline. Showing your last saved data.
     </div>
   );
 }
