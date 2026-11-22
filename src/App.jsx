@@ -5,7 +5,7 @@ import LandingPage from './components/LandingPage';
 import BoarderView from './components/BoarderView';
 import AdminView from './components/AdminView';
 import ReserveModal from './components/ReserveModal';
-import Toast from './components/Toast';
+import Toast from './components/Toast'
 import './App.css'
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -13,7 +13,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 
 // rooms at reservations ay kinukuha sa MySQL (easeplace_db)
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const API_URL = `${API_BASE}/rooms`;
 const RES_URL = `${API_BASE}/reservations`;
 

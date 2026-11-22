@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      manifestFilename: 'manifest.json',
 
       // Naka-off sa development para hindi makagulo ang cache habang nag-e-edit.
       // I-test ang PWA gamit ang: npm run build  tapos  npm run preview
